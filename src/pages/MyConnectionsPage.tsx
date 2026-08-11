@@ -1,6 +1,6 @@
 import {useEffect,useState} from "react";
 import {useNavigate} from "react-router-dom";
-
+import { Link } from "react-router-dom";
 import {
     Box,
     Button,
@@ -16,17 +16,20 @@ import {
 import {useAuth} from "../auth/AuthProvider";
 
 import {
-    getAcceptedConnectionsByUserId,
-    getIncomingRequestsByUserId,
-    acceptConnection,
-    declineConnection,
-    removeConnection
+getAcceptedConnectionDetailsByUserId,
+getIncomingRequestsByUserId,
+getOutgoingConnectionDetailsByUserId,
+acceptConnection,
+declineConnection,
+removeConnection
 } from "../services/profileConnectionService";
 
 import {getProfileByUserId} from "../services/profileService";
 
 import type {ProfileConnectionResponseDTO} from "../models/ProfileConnectionResponseDTO";
+import type {ProfileConnectionDetailsResponseDTO} from "../models/ProfileConnectionDetailsResponseDTO";
 import type {ProfileResponseDTO} from "../models/ProfileResponseDTO";
+import type {ProfileConnectionOutgoingDetailsResponseDTO} from "../models/ProfileConnectionOutgoingDetailsResponseDTO";
 
 export default function MyConnectionsPage() {
 
@@ -34,17 +37,21 @@ export default function MyConnectionsPage() {
 
     const {appUser} = useAuth();
 
-    const [connections, setConnections] =
+    const [connections,setConnections] =
+        useState<ProfileConnectionDetailsResponseDTO[]>([]);
+
+    const [incomingConnections,setIncomingConnections] =
         useState<ProfileConnectionResponseDTO[]>([]);
 
-    const [incomingConnections, setIncomingConnections] =
-        useState<ProfileConnectionResponseDTO[]>([]);
+    const [outgoingConnections,setOutgoingConnections] =
+    useState<ProfileConnectionOutgoingDetailsResponseDTO[]>([]);
 
-    const [profiles, setProfiles] =
-        useState<Record<string, ProfileResponseDTO>>({});
+    const [profiles,setProfiles] =
+        useState<Record<string,ProfileResponseDTO>>({});
 
-    const [loading, setLoading] =
+    const [loading,setLoading] =
         useState(true);
+
 
     useEffect(() => {
 
@@ -57,39 +64,73 @@ export default function MyConnectionsPage() {
 
             try {
 
-                const accepted = await getAcceptedConnectionsByUserId(appUser.userId);
-                const incoming = await getIncomingRequestsByUserId(appUser.userId);
+                const accepted =
+                    await getAcceptedConnectionDetailsByUserId(
+                        appUser.userId
+                    );
+
+                const incoming =
+                    await getIncomingRequestsByUserId(
+                        appUser.userId
+                    );
+
+                const outgoing =
+                await getOutgoingConnectionDetailsByUserId(
+                appUser.userId
+                    );
 
                 setConnections(accepted);
                 setIncomingConnections(incoming);
+                setOutgoingConnections(outgoing);
 
-                const userIds = [
-                    ...accepted.map(connection =>
-                        connection.requesterUserId === appUser.userId
-                            ? connection.recipientUserId
-                            : connection.requesterUserId
-                    ),
-                    ...incoming.map(connection => connection.requesterUserId)
-                ];
+                const incomingUserIds =
+                    incoming.map(
+                        connection =>
+                            connection.requesterUserId
+                    );
 
-                const uniqueUserIds = [...new Set(userIds)];
+                const uniqueIncomingUserIds =
+                    [...new Set(incomingUserIds)];
 
-                const profileResults = await Promise.all(
-                    uniqueUserIds.map(async userId => {
-                        const profile = await getProfileByUserId(userId);
-                        return {userId, profile};
-                    })
-                );
 
-                const profileMap = Object.fromEntries(
-                    profileResults.map(result => [result.userId, result.profile])
-                );
+                const profileResults =
+                    await Promise.all(
+                        uniqueIncomingUserIds.map(
+                            async userId => {
+
+                                const profile =
+                                    await getProfileByUserId(
+                                        userId
+                                    );
+
+                                return {
+                                    userId,
+                                    profile
+                                };
+                            }
+                        )
+                    );
+
+
+                const profileMap =
+                    Object.fromEntries(
+                        profileResults.map(
+                            result => [
+                                result.userId,
+                                result.profile
+                            ]
+                        )
+                    );
+
 
                 setProfiles(profileMap);
 
             } catch(error) {
 
-                console.error("Failed loading connections:", error);
+                console.error(
+                    "Failed loading connections:",
+                    error
+                );
 
             } finally {
 
@@ -100,96 +141,151 @@ export default function MyConnectionsPage() {
 
         loadConnections();
 
-    }, [appUser]);
+    },[appUser]);
 
-    function getOtherUserId(connection: ProfileConnectionResponseDTO) {
 
-        return connection.requesterUserId === appUser?.userId
-            ? connection.recipientUserId
-            : connection.requesterUserId;
-
-    }
-
-    async function handleRemoveConnection(connectionId: string) {
+    async function handleRemoveConnection(
+        connectionId: string
+    ) {
 
         try {
 
-            await removeConnection(connectionId);
+            await removeConnection(
+                connectionId
+            );
 
-            setConnections(previous =>
-                previous.filter(connection => connection.connectionId !== connectionId)
+            setConnections(
+                previous =>
+                    previous.filter(
+                        connection =>
+                            connection.connectionId !== connectionId
+                    )
             );
 
         } catch(error) {
 
-            console.error("Failed removing connection:", error);
+            console.error(
+                "Failed removing connection:",
+                error
+            );
 
         }
     }
 
-    async function handleAcceptConnection(connectionId: string) {
+
+    async function handleAcceptConnection(
+        connectionId: string
+    ) {
 
         try {
 
-            await acceptConnection(connectionId);
+            await acceptConnection(
+                connectionId
+            );
 
-            setIncomingConnections(previous =>
-                previous.filter(connection => connection.connectionId !== connectionId)
+            setIncomingConnections(
+                previous =>
+                    previous.filter(
+                        connection =>
+                            connection.connectionId !== connectionId
+                    )
             );
 
         } catch(error) {
 
-            console.error("Failed accepting connection:", error);
+            console.error(
+                "Failed accepting connection:",
+                error
+            );
 
         }
     }
 
-    async function handleDeclineConnection(connectionId: string) {
+
+    async function handleDeclineConnection(
+        connectionId: string
+    ) {
 
         try {
 
-            await declineConnection(connectionId);
+            await declineConnection(
+                connectionId
+            );
 
-            setIncomingConnections(previous =>
-                previous.filter(connection => connection.connectionId !== connectionId)
+            setIncomingConnections(
+                previous =>
+                    previous.filter(
+                        connection =>
+                            connection.connectionId !== connectionId
+                    )
             );
 
         } catch(error) {
 
-            console.error("Failed declining connection:", error);
+            console.error(
+                "Failed declining connection:",
+                error
+            );
 
         }
     }
+
 
     if (loading) {
+
         return (
-            <Stack display="flex" justifyContent="center" alignItems="center" height="100vh">
+            <Stack
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height="100vh"
+            >
                 <CircularProgress/>
             </Stack>
         );
+
     }
+
 
     return (
 
-        <Box sx={{maxWidth:1200,mx:"auto",mt:5}}>
+        <Box
+            sx={{
+                maxWidth:1200,
+                mx:"auto",
+                mt:5
+            }}
+        >
 
             <Paper sx={{p:4}}>
 
-                <Stack direction="row" alignItems="center" sx={{ mb: 6 }}>
-                <Typography variant="h4">
-                  My Connections
-                </Typography>
+                <Stack
+                    direction="row"
+                    alignItems="center"
+                    sx={{mb:6}}
+                >
 
-                  <Button
-                  sx={{ ml: 12 }}
-                  variant="outlined"
-                  onClick={() => navigate(`/profile/${appUser?.userId}`)}
-                  >
-                  Back to My Profile
-                  </Button>
-                  </Stack>
+                    <Typography variant="h4">
+                        My Connections
+                    </Typography>
+
+                    <Button
+                        sx={{ml:12}}
+                        variant="outlined"
+                        onClick={() =>
+                            navigate(
+                                `/profile/${appUser?.userId}`
+                            )
+                        }
+                    >
+                        Back to My Profile
+                    </Button>
+
+                </Stack>
+
 
                 <Divider sx={{mb:3}}/>
+
 
                 {connections.length === 0 &&
                     <Typography color="text.secondary">
@@ -197,62 +293,155 @@ export default function MyConnectionsPage() {
                     </Typography>
                 }
 
+
                 <Stack spacing={2}>
 
-                    {connections.map(connection => {
+                    {connections.map(connection => (
 
-                        const userId = getOtherUserId(connection);
+                        <Paper
+                            key={connection.connectionId}
+                            variant="outlined"
+                            sx={{p:2}}
+                        >
 
-                        return (
-
-                            <Paper
-                                key={connection.connectionId}
-                                variant="outlined"
-                                sx={{p:2}}
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                gap={2}
                             >
 
-                                <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    gap={2}
-                                >
-
-                                    <Typography sx={{ flexGrow: 1, mr: 4 }}>
-                                {profiles[userId]?.displayName ?? "Loading..."}
+                                <Typography
+                                    sx={{
+                                        flexGrow:1,
+                                        mr:4
+                                    }}
+                                   component={Link}
+                          to={`/profile/${connection.userId}`}
+                                sx={{
+                              color: "primary.main",
+                              textDecoration: "none",
+                              "&:hover": {
+                              textDecoration: "underline" }
+                                  }} >
+                                {connection.displayName}
                                   </Typography>
 
-                                    <Select
-                                        sx={{ minWidth: 170 }}
-                                        defaultValue=""
-                                        displayEmpty
-                                        size="small"
-                                        onChange={event => {
 
-                                            if (event.target.value === "remove") {
-                                                handleRemoveConnection(connection.connectionId);
-                                            }
+                                <Select
+                                    sx={{
+                                        minWidth:170
+                                    }}
+                                    defaultValue=""
+                                    displayEmpty
+                                    size="small"
+                                    onChange={event => {
 
-                                        }}
-                                    >
-                                        <MenuItem value="">Actions</MenuItem>
-                                        <MenuItem value="remove">Remove Connection</MenuItem>
-                                    </Select>
+                                        if(
+                                            event.target.value === "remove"
+                                        ) {
 
-                                </Stack>
+                                            handleRemoveConnection(
+                                                connection.connectionId
+                                            );
 
-                            </Paper>
+                                        }
 
-                        );
+                                    }}
+                                >
 
-                    })}
+                                    <MenuItem value="">
+                                        Actions
+                                    </MenuItem>
+
+                                    <MenuItem value="remove">
+                                        Remove Connection
+                                    </MenuItem>
+
+                                </Select>
+
+                            </Stack>
+
+                        </Paper>
+
+                    ))}
 
                 </Stack>
 
+
+
+<Divider sx={{my:4}}/>
+
+
+<Typography
+    variant="h4"
+    gutterBottom
+>
+    Outgoing Requests
+</Typography>
+
+
+{outgoingConnections.length === 0 &&
+    <Typography color="text.secondary">
+        No outgoing connection requests.
+    </Typography>
+}
+
+
+<Stack spacing={2}>
+
+    {outgoingConnections.map(connection => (
+
+        <Paper
+            key={connection.connectionId}
+            variant="outlined"
+            sx={{p:2}}
+        >
+
+            <Stack
+                direction="row"
+                alignItems="center"
+                gap={2}
+            >
+
+                <Typography
+                    sx={{
+                        flexGrow:1
+                    }}
+                    component={Link}
+                    to={`/profile/${connection.recipientUserId}`}
+                >
+                    {connection.displayName}
+                </Typography>
+
+
+                <Typography
+                    color="text.secondary"
+                >
+                    Pending
+                </Typography>
+
+            </Stack>
+
+        </Paper>
+
+    ))}
+
+</Stack>
+
+
+
+
+
                 <Divider sx={{my:4}}/>
 
-                <Typography variant="h4" gutterBottom>
+
+                <Typography
+                    variant="h4"
+                    gutterBottom
+                >
                     Incoming Connections
                 </Typography>
+
 
                 {incomingConnections.length === 0 &&
                     <Typography color="text.secondary">
@@ -260,11 +449,13 @@ export default function MyConnectionsPage() {
                     </Typography>
                 }
 
+
                 <Stack spacing={2}>
 
                     {incomingConnections.map(connection => {
 
-                        const userId = connection.requesterUserId;
+                        const userId =
+                            connection.requesterUserId;
 
                         return (
 
@@ -281,8 +472,13 @@ export default function MyConnectionsPage() {
                                 >
 
                                     <Typography>
-                                        {profiles[userId]?.displayName ?? "Loading..."}
+                                        {
+                                            profiles[userId]
+                                                ?.displayName
+                                                ?? "Loading..."
+                                        }
                                     </Typography>
+
 
                                     <Select
                                         defaultValue=""
@@ -290,19 +486,41 @@ export default function MyConnectionsPage() {
                                         size="small"
                                         onChange={event => {
 
-                                            if (event.target.value === "accept") {
-                                                handleAcceptConnection(connection.connectionId);
+                                            if(
+                                                event.target.value === "accept"
+                                            ) {
+
+                                                handleAcceptConnection(
+                                                    connection.connectionId
+                                                );
+
                                             }
 
-                                            if (event.target.value === "decline") {
-                                                handleDeclineConnection(connection.connectionId);
+                                            if(
+                                                event.target.value === "decline"
+                                            ) {
+
+                                                handleDeclineConnection(
+                                                    connection.connectionId
+                                                );
+
                                             }
 
                                         }}
                                     >
-                                        <MenuItem value="">Actions</MenuItem>
-                                        <MenuItem value="accept">Accept</MenuItem>
-                                        <MenuItem value="decline">Decline</MenuItem>
+
+                                        <MenuItem value="">
+                                            Actions
+                                        </MenuItem>
+
+                                        <MenuItem value="accept">
+                                            Accept
+                                        </MenuItem>
+
+                                        <MenuItem value="decline">
+                                            Decline
+                                        </MenuItem>
+
                                     </Select>
 
                                 </Stack>
@@ -320,5 +538,6 @@ export default function MyConnectionsPage() {
         </Box>
 
     );
-
 }
+
+

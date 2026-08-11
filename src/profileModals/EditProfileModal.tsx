@@ -1,5 +1,6 @@
 import {
-    useState
+    useState,
+    useEffect
 } from "react";
 
 import {
@@ -28,6 +29,7 @@ interface Props {
     onSave: (
         profile: ProfileResponseDTO
     ) => Promise<void>;
+
 }
 
 
@@ -39,10 +41,31 @@ export default function EditProfileModal({
 }: Props) {
 
 
-    const [form, setForm] =
+    const [form,setForm] =
         useState<ProfileResponseDTO>(
             profile
         );
+
+
+    const [usernameError,setUsernameError] =
+        useState("");
+
+
+    const [loading,setLoading] =
+        useState(false);
+
+
+    useEffect(() => {
+
+        if (open) {
+
+            setForm(profile);
+
+            setUsernameError("");
+
+        }
+
+    }, [profile,open]);
 
 
     function updateField(
@@ -55,14 +78,63 @@ export default function EditProfileModal({
             [field]: value
         }));
 
+
+        if (field === "displayName") {
+
+            setUsernameError("");
+
+        }
+
     }
 
 
     async function submit() {
 
-        await onSave(form);
 
-        onClose();
+        try {
+
+            setLoading(true);
+
+            setUsernameError("");
+
+
+            await onSave(form);
+
+
+            onClose();
+
+
+        } catch(error) {
+
+
+            console.error(error);
+
+
+            if (
+                error instanceof Error &&
+                error.message ===
+                    "username is already taken"
+            ) {
+
+                setUsernameError(
+                    "username is already taken"
+                );
+
+            } else {
+
+                console.error(
+                    "Failed updating profile:",
+                    error
+                );
+
+            }
+
+
+        } finally {
+
+            setLoading(false);
+
+        }
 
     }
 
@@ -73,10 +145,17 @@ export default function EditProfileModal({
             open={open}
             onClose={onClose}
             fullWidth
-            maxWidth="sm"
+            maxWidth="md"
         >
 
-            <DialogTitle>
+
+            <DialogTitle
+                sx={{
+                    fontSize:"1.1rem",
+                    fontWeight:500,
+                    pb:1
+                }}
+            >
                 Edit Profile
             </DialogTitle>
 
@@ -84,13 +163,16 @@ export default function EditProfileModal({
             <DialogContent>
 
                 <Stack
-                    spacing={2}
-                    mt={1}
+                    spacing={4}
+                    sx={{pt:2}}
                 >
+
 
                     <TextField
                         label="Display Name"
-                        value={form.displayName ?? ""}
+                        value={
+                            form.displayName ?? ""
+                        }
                         onChange={
                             e =>
                                 updateField(
@@ -98,13 +180,23 @@ export default function EditProfileModal({
                                     e.target.value
                                 )
                         }
+                        error={
+                            Boolean(
+                                usernameError
+                            )
+                        }
+                        helperText={
+                            usernameError
+                        }
                         fullWidth
                     />
 
 
                     <TextField
                         label="Phone"
-                        value={form.phone ?? ""}
+                        value={
+                            form.phone ?? ""
+                        }
                         onChange={
                             e =>
                                 updateField(
@@ -118,7 +210,9 @@ export default function EditProfileModal({
 
                     <TextField
                         label="Email"
-                        value={form.email ?? ""}
+                        value={
+                            form.email ?? ""
+                        }
                         onChange={
                             e =>
                                 updateField(
@@ -132,7 +226,9 @@ export default function EditProfileModal({
 
                     <TextField
                         label="Timezone"
-                        value={form.timezone ?? ""}
+                        value={
+                            form.timezone ?? ""
+                        }
                         onChange={
                             e =>
                                 updateField(
@@ -160,7 +256,7 @@ export default function EditProfileModal({
                         fullWidth
                         slotProps={{
                             inputLabel: {
-                                shrink: true
+                                shrink:true
                             }
                         }}
                     />
@@ -170,7 +266,9 @@ export default function EditProfileModal({
                         label="Bio"
                         multiline
                         rows={4}
-                        value={form.bio ?? ""}
+                        value={
+                            form.bio ?? ""
+                        }
                         onChange={
                             e =>
                                 updateField(
@@ -181,6 +279,7 @@ export default function EditProfileModal({
                         fullWidth
                     />
 
+
                 </Stack>
 
             </DialogContent>
@@ -188,8 +287,10 @@ export default function EditProfileModal({
 
             <DialogActions>
 
+
                 <Button
                     onClick={onClose}
+                    disabled={loading}
                 >
                     Cancel
                 </Button>
@@ -198,9 +299,17 @@ export default function EditProfileModal({
                 <Button
                     variant="contained"
                     onClick={submit}
+                    disabled={loading}
                 >
-                    Save
+
+                    {
+                        loading
+                            ? "Saving..."
+                            : "Save"
+                    }
+
                 </Button>
+
 
             </DialogActions>
 
@@ -208,4 +317,7 @@ export default function EditProfileModal({
         </Dialog>
 
     );
+
 }
+
+

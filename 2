@@ -101,45 +101,53 @@ const viewingOwnProfile =
     viewingOwnProfile
       });
 
-useEffect(() => {
+    useEffect(() => {
 
-    async function loadProfile() {
 
-        if (!userId) {
-            return;
-        }
+        async function loadProfile() {
 
-        setProfile(null);
-        setLoadingProfile(true);
 
-        try {
+            if (!userId) {
 
-            const response =
-                await getProfileByUserId(
-                    userId
+                return;
+            }
+
+
+            try {
+
+
+                const response =
+                    await getProfileByUserId(
+                        userId
+                    );
+
+
+                setProfile(
+                    response
                 );
 
-            setProfile(
-                response
-            );
 
-        } catch(error) {
+            } catch(error) {
 
-            console.error(
-                error
-            );
 
-        } finally {
+                console.error(
+                    error
+                );
 
-            setLoadingProfile(false);
+            } finally {
+
+
+                setLoadingProfile(false);
+
+            }
 
         }
 
-    }
 
-    loadProfile();
+        loadProfile();
 
-}, [userId]);
+
+    }, [userId]);
 
 
 
@@ -668,20 +676,16 @@ async function handleRequestConnection() {
 
                         </Button>
 
-                      <Button
-                      variant="outlined"
-                      onClick={() =>
-                      setSearchOpen(true)
-                                }
-                                >
 
-                            Search
-
-                          </Button>
 
                     </Stack>
 
                 }
+
+
+
+
+
 
 
 
@@ -709,30 +713,7 @@ async function handleRequestConnection() {
 
             </Paper>
 
-{
-    viewingOwnProfile &&
 
-    <Box
-        sx={{
-            mt: 2
-        }}
-    >
-
-        <Button
-            fullWidth
-            variant="outlined"
-            onClick={() =>
-                window.location.href =
-                    "http://localhost:5174"
-            }
-        >
-
-            Collections
-
-        </Button>
-
-    </Box>
-}
 
 
 
@@ -757,16 +738,6 @@ async function handleRequestConnection() {
                 />
 
             }
-
-<SearchProfileModal
-
-    open={searchOpen}
-
-    onClose={() =>
-        setSearchOpen(false)
-    }
-
-/>
 
 
 

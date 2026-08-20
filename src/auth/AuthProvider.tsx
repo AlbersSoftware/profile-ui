@@ -126,7 +126,7 @@ export function AuthProvider({
                     token
                 );
 
-
+                console.log("Access token:", session.tokens?.accessToken?.toString());
 
                 /*
                  * Hydrate application user.

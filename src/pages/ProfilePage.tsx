@@ -723,7 +723,7 @@ async function handleRequestConnection() {
             variant="outlined"
             onClick={() =>
                 window.location.href =
-                    "http://localhost:5174"
+                    "http://localhost:5174?fromProfile=true"
             }
         >
 

@@ -30,7 +30,9 @@ import {
     getConnectionByUsers,
     requestConnection
 } from "../services/profileConnectionService";
+import { getProfileAvatar } from "../services/mediaService";
 
+import AddAvatarModal from "../modals/AddAvatarModal";
 
 import type { ProfileResponseDTO } from "../models/ProfileResponseDTO";
 
@@ -84,6 +86,12 @@ export default function ProfilePage() {
     
     const [searchOpen, setSearchOpen] =
         useState(false);
+// avatar state
+const [avatarOpen, setAvatarOpen] =
+    useState(false);
+
+const [avatarUrl, setAvatarUrl] =
+    useState<string | null>(null);
 
 
   const currentUserId =
@@ -141,6 +149,43 @@ useEffect(() => {
 
 }, [userId]);
 
+
+useEffect(() => {
+
+    async function loadAvatar() {
+
+        if (!profile?.avatarMediaId) {
+
+            setAvatarUrl(null);
+
+            return;
+        }
+
+        try {
+
+            const avatar =
+                await getProfileAvatar(
+                    profile.avatarMediaId
+                );
+
+            setAvatarUrl(
+                avatar.imageUrl
+            );
+
+        } catch(error) {
+
+            console.error(
+                "Failed loading profile avatar:",
+                error
+            );
+
+            setAvatarUrl(null);
+        }
+    }
+
+    loadAvatar();
+
+}, [profile?.avatarMediaId]);
 
 
 
@@ -403,9 +448,37 @@ async function handleRequestConnection() {
                 >
 
                     <Avatar
+                        src={
+                            avatarUrl
+                                ?? undefined
+                        }
+                        alt={
+                            profile?.displayName
+                                ?? "Profile avatar"
+                        }
+                        onClick={
+                            viewingOwnProfile
+                                ? () =>
+                                    setAvatarOpen(true)
+                                : undefined
+                        }
                         sx={{
-                            width:96,
-                            height:96
+                            width: 96,
+                            height: 96,
+
+                            cursor:
+                                viewingOwnProfile
+                                    ? "pointer"
+                                    : "default",
+
+                            transition:
+                                "opacity 0.2s ease",
+
+                            "&:hover": viewingOwnProfile
+                                ? {
+                                    opacity: 0.8
+                                }
+                                : undefined
                         }}
                     />
 
@@ -757,6 +830,24 @@ async function handleRequestConnection() {
                 />
 
             }
+
+                {viewingOwnProfile && profile && (
+        <AddAvatarModal
+            open={avatarOpen}
+            profile={profile}
+            onClose={() =>
+                setAvatarOpen(false)
+            }
+            onSaved={(updatedProfile) => {
+
+                setProfile(
+                    updatedProfile
+                );
+
+                setAvatarOpen(false);
+            }}
+        />
+    )}
 
 <SearchProfileModal
 

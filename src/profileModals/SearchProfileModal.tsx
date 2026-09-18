@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import {
+    Avatar,
     Box,
     Button,
     CircularProgress,
@@ -14,11 +15,22 @@ import {
     Typography
 } from "@mui/material";
 
-import { searchProfiles } from "../services/profileService";
+import {
+    searchProfiles
+} from "../services/profileService";
 
-import type { ProfileSearchResponseDTO } from "../models/ProfileSearchResponseDTO";
+import {
+    getProfileAvatar
+} from "../services/mediaService";
 
-import { useNavigate } from "react-router-dom";
+import type {
+    ProfileSearchResponseDTO
+} from "../models/ProfileSearchResponseDTO";
+
+import {
+    useNavigate
+} from "react-router-dom";
+
 
 interface SearchProfileModalProps {
 
@@ -36,23 +48,30 @@ export default function SearchProfileModal(
     }: SearchProfileModalProps
 ) {
 
-    const [searchTerm,setSearchTerm] =
+    const [searchTerm, setSearchTerm] =
         useState("");
 
-    const [profiles,setProfiles] =
+    const [profiles, setProfiles] =
         useState<ProfileSearchResponseDTO[]>([]);
 
-    const [page,setPage] =
+    const [avatarUrls, setAvatarUrls] =
+        useState<Map<string, string>>(
+            new Map()
+        );
+
+    const [page, setPage] =
         useState(0);
 
-    const [loading,setLoading] =
+    const [loading, setLoading] =
         useState(false);
 
-    const [loadingMore,setLoadingMore] =
+    const [loadingMore, setLoadingMore] =
         useState(false);
+
 
     const navigate =
-    useNavigate();
+        useNavigate();
+
 
     useEffect(() => {
 
@@ -67,6 +86,11 @@ export default function SearchProfileModal(
         if (!trimmedSearchTerm) {
 
             setProfiles([]);
+
+            setAvatarUrls(
+                new Map()
+            );
+
             setPage(0);
 
             return;
@@ -96,6 +120,14 @@ export default function SearchProfileModal(
                             results
                         );
 
+                        setAvatarUrls(
+                            new Map()
+                        );
+
+                        await resolveProfileAvatars(
+                            results
+                        );
+
 
                     } catch(error) {
 
@@ -105,6 +137,10 @@ export default function SearchProfileModal(
                         );
 
                         setProfiles([]);
+
+                        setAvatarUrls(
+                            new Map()
+                        );
 
 
                     } finally {
@@ -122,7 +158,88 @@ export default function SearchProfileModal(
             clearTimeout(timeout);
 
 
-    },[searchTerm,open]);
+    }, [
+        searchTerm,
+        open
+    ]);
+
+
+    async function resolveProfileAvatars(
+        profiles: ProfileSearchResponseDTO[]
+    ) {
+
+        const profilesWithAvatars =
+            profiles.filter(
+                profile =>
+                    profile.avatarMediaId
+            );
+
+
+        if (
+            profilesWithAvatars.length === 0
+        ) {
+
+            return;
+        }
+
+
+        const resolvedEntries =
+            await Promise.all(
+                profilesWithAvatars.map(
+                    async profile => {
+
+                        try {
+
+                            const avatar =
+                                await getProfileAvatar(
+                                    profile.avatarMediaId!
+                                );
+
+
+                            return [
+                                profile.userId,
+                                avatar.imageUrl
+                            ] as const;
+
+
+                        } catch(error) {
+
+                            console.error(
+                                `Failed loading avatar for ${profile.userId}:`,
+                                error
+                            );
+
+
+                            return null;
+
+                        }
+
+                    }
+                )
+            );
+
+
+        const validEntries =
+            resolvedEntries.filter(
+                (
+                    entry
+                ): entry is readonly [
+                    string,
+                    string
+                ] =>
+                    entry !== null
+            );
+
+
+        setAvatarUrls(
+            previous =>
+                new Map([
+                    ...previous,
+                    ...validEntries
+                ])
+        );
+
+    }
 
 
     async function handleLoadMore() {
@@ -149,6 +266,11 @@ export default function SearchProfileModal(
                         ...previous,
                         ...results
                     ]
+            );
+
+
+            await resolveProfileAvatars(
+                results
             );
 
 
@@ -180,21 +302,28 @@ export default function SearchProfileModal(
 
         setProfiles([]);
 
+        setAvatarUrls(
+            new Map()
+        );
+
         setPage(0);
 
         onClose();
 
     }
 
-function handleProfileClick( userId: string ) {
 
-    navigate(
-        `/profile/${userId}`
-    );
+    function handleProfileClick(
+        userId: string
+    ) {
 
-    handleClose();
+        navigate(
+            `/profile/${userId}`
+        );
 
-}
+        handleClose();
+
+    }
 
 
     const hasMore =
@@ -211,20 +340,21 @@ function handleProfileClick( userId: string ) {
 
             <Box
                 sx={{
-                    position:"absolute",
-                    top:"50%",
-                    left:"50%",
-                    transform:"translate(-50%, -50%)",
-                    width:500,
-                    maxHeight:"80vh"
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform:
+                        "translate(-50%, -50%)",
+                    width: 500,
+                    maxHeight: "80vh"
                 }}
             >
 
                 <Paper
                     sx={{
-                        p:4,
-                        maxHeight:"80vh",
-                        overflow:"auto"
+                        p: 4,
+                        maxHeight: "80vh",
+                        overflow: "auto"
                     }}
                 >
 
@@ -250,14 +380,14 @@ function handleProfileClick( userId: string ) {
                     />
 
 
-                    <Box sx={{mt:3}}>
+                    <Box sx={{ mt: 3 }}>
 
                         {
                             loading &&
 
                             <Stack
                                 alignItems="center"
-                                sx={{py:3}}
+                                sx={{ py: 3 }}
                             >
 
                                 <CircularProgress
@@ -288,28 +418,56 @@ function handleProfileClick( userId: string ) {
                                     profile => (
 
                                         <Paper
-                                      key={ profile.userId }
-                                      variant="outlined"
-                                      sx={{
-                                          p:2,
-                                          cursor:"pointer",
-                                          "&:hover": {
-                                          backgroundColor:
-                                          "action.hover"
-                                                  }
-                                            }}
-                                        onClick={() =>
-                                        handleProfileClick(
-                                        profile.userId
-                                              )
-                                              }
-                                                >
+                                            key={
+                                                profile.userId
+                                            }
+                                            variant="outlined"
+                                            sx={{
+                                                p: 2,
+                                                cursor: "pointer",
 
-                                            <Typography>
-                                                {
-                                                    profile.displayName
+                                                "&:hover": {
+                                                    backgroundColor:
+                                                        "action.hover"
                                                 }
-                                            </Typography>
+                                            }}
+                                            onClick={() =>
+                                                handleProfileClick(
+                                                    profile.userId
+                                                )
+                                            }
+                                        >
+
+                                            <Stack
+                                                direction="row"
+                                                spacing={2}
+                                                alignItems="center"
+                                            >
+
+                                                <Avatar
+                                                    src={
+                                                        avatarUrls.get(
+                                                            profile.userId
+                                                        )
+                                                    }
+                                                    alt={
+                                                        profile.displayName
+                                                    }
+                                                    sx={{
+                                                        width: 44,
+                                                        height: 44
+                                                    }}
+                                                />
+
+                                                <Typography
+                                                    fontWeight={500}
+                                                >
+                                                    {
+                                                        profile.displayName
+                                                    }
+                                                </Typography>
+
+                                            </Stack>
 
                                         </Paper>
 
@@ -327,7 +485,7 @@ function handleProfileClick( userId: string ) {
                             <Button
                                 fullWidth
                                 variant="outlined"
-                                sx={{mt:2}}
+                                sx={{ mt: 2 }}
                                 onClick={
                                     handleLoadMore
                                 }
@@ -351,7 +509,7 @@ function handleProfileClick( userId: string ) {
                     <Button
                         fullWidth
                         variant="outlined"
-                        sx={{mt:3}}
+                        sx={{ mt: 3 }}
                         onClick={handleClose}
                     >
 
@@ -369,5 +527,3 @@ function handleProfileClick( userId: string ) {
     );
 
 }
-
-

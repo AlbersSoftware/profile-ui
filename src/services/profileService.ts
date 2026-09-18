@@ -4,29 +4,36 @@ import {
 } from "./api";
 
 import type {
+    ProfileResponseDTO
+} from "../models/ProfileResponseDTO";
+
+import type {
+    UpdateProfileRequestDTO
+} from "../models/UpdateProfileRequestDTO";
+
+import type {
     ProfileSearchResponseDTO
 } from "../models/ProfileSearchResponseDTO";
 
 
 export async function getProfileByUserId(
     userId: string
-) {
+): Promise<ProfileResponseDTO | null> {
 
     const response =
         await fetch(
             `${API_BASE}/profiles/${userId}`,
             {
-                headers: await authHeaders()
+                headers:
+                    await authHeaders()
             }
         );
 
     if (response.status === 404) {
-
         return null;
     }
 
     if (!response.ok) {
-
         throw new Error(
             "Failed to load profile."
         );
@@ -36,13 +43,9 @@ export async function getProfileByUserId(
 }
 
 
-
-
-
-
 export async function createProfile(
     profile: unknown
-) {
+): Promise<ProfileResponseDTO> {
 
     const response =
         await fetch(
@@ -60,26 +63,19 @@ export async function createProfile(
             }
         );
 
-
     if (!response.ok) {
 
         let message =
             "Failed to create profile.";
-
 
         try {
 
             const error =
                 await response.json();
 
-
-            if (
-                error.message
-            ) {
-
+            if (error.message) {
                 message =
                     error.message;
-
             }
 
         } catch {
@@ -87,23 +83,19 @@ export async function createProfile(
             // Response was not JSON.
         }
 
-
         throw new Error(
             message
         );
-
     }
 
-
     return response.json();
-
 }
 
 
 export async function updateProfile(
     userId: string,
-    profile: unknown
-) {
+    profile: UpdateProfileRequestDTO
+): Promise<ProfileResponseDTO> {
 
     const response =
         await fetch(
@@ -121,26 +113,19 @@ export async function updateProfile(
             }
         );
 
-
     if (!response.ok) {
 
         let message =
             "Failed to update profile.";
-
 
         try {
 
             const error =
                 await response.json();
 
-
-            if (
-                error.message
-            ) {
-
+            if (error.message) {
                 message =
                     error.message;
-
             }
 
         } catch {
@@ -148,16 +133,12 @@ export async function updateProfile(
             // Response was not JSON.
         }
 
-
         throw new Error(
             message
         );
-
     }
 
-
     return response.json();
-
 }
 
 
